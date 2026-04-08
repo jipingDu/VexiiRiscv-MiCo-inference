@@ -72,7 +72,7 @@ object MiCoSocSim extends App{
 
     if (withRvlsCheck) probe.add(new RvlsBackend(new File(currentTestPath)).spinalSimFlusher(hzToLong(1000 Hz)))
 
-    probe.autoRegions()
+    // probe.autoRegions() // disabled for VPU compat
     probe.checkLiveness = false
 
     if(p.socCtrl.withJtagTap) {

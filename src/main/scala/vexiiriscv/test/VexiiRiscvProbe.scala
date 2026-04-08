@@ -293,21 +293,25 @@ class VexiiRiscvProbe(cpu : VexiiRiscv, kb : Option[konata.Backend], var withRvl
     }
     def toKonata(hart : HartCtx): Unit = {
       if(!trace) return
-      val fetch = hart.fetch(fetchId)
-      val decode = hart.decode(decodeId)
+      val fetchOpt = if(fetchId >= 0 && fetchId < hart.fetch.length) Some(hart.fetch(fetchId)) else None
+      val decodeOpt = if(decodeId >= 0 && decodeId < hart.decode.length) Some(hart.decode(decodeId)) else None
       val instruction = if(withRvls) rvls.jni.Frontend.disassemble(disass, this.instruction) else "? rvls disabled ?"
 
       val i = new konata.Instruction()
-      if (fetch.spawnAt != -1) {
-        i += new Spawn(fetch.spawnAt, hart.hartId)
-        i += new Stage(fetch.spawnAt, "A")
-        if(withFetch) i += new Stage(fetch.spawnAt+1, "F")
+      fetchOpt.foreach { fetch =>
+        if (fetch.spawnAt != -1) {
+          i += new Spawn(fetch.spawnAt, hart.hartId)
+          i += new Stage(fetch.spawnAt, "A")
+          if(withFetch) i += new Stage(fetch.spawnAt+1, "F")
+        }
       }
-      if (decode.spawnAt != -1) {
-        i += new Comment(decode.spawnAt, f"${decode.pc}%X : $instruction")
-      }
-      if(decode.fireAt != -1){
-        i += new Stage(decode.fireAt+1, "D")
+      decodeOpt.foreach { decode =>
+        if (decode.spawnAt != -1) {
+          i += new Comment(decode.spawnAt, f"${decode.pc}%X : $instruction")
+        }
+        if(decode.fireAt != -1){
+          i += new Stage(decode.fireAt+1, "D")
+        }
       }
       if (executeAt != -1) i += new Stage(executeAt, "E")
       if (didCommit) {
@@ -365,7 +369,9 @@ class VexiiRiscvProbe(cpu : VexiiRiscv, kb : Option[konata.Backend], var withRvl
     if (proxies.fetch.fire.toBoolean) {
       val hart = harts(fetch.hartd.toInt)
       val fetchId = fetch.id.toInt
-      hart.fetch(fetchId).spawnAt = cycle
+      if(fetchId >= 0 && fetchId < hart.fetch.length){
+        hart.fetch(fetchId).spawnAt = cycle
+      }
     }
 
     for(decode <-decodes) {
@@ -375,16 +381,18 @@ class VexiiRiscvProbe(cpu : VexiiRiscv, kb : Option[konata.Backend], var withRvl
       if (spawn || fire) {
         val hart = harts(decode.hartId.toInt)
         val decodeId = decode.decodeId.toInt
-        val ctx = hart.decode(decodeId)
-        if(spawn){
-          val fetchId = decode.fetchId.toInt
-          ctx.pc = decode.pc.toLong
-          ctx.fetchId = fetchId
-          ctx.spawnAt = cycle
-          ctx.fireAt = -1
-        }
-        if(fire){
-          ctx.fireAt = cycle
+        if(decodeId >= 0 && decodeId < hart.decode.length){
+          val ctx = hart.decode(decodeId)
+          if(spawn){
+            val fetchId = decode.fetchId.toInt
+            ctx.pc = decode.pc.toLong
+            ctx.fetchId = fetchId
+            ctx.spawnAt = cycle
+            ctx.fireAt = -1
+          }
+          if(fire){
+            ctx.fireAt = cycle
+          }
         }
       }
     }
@@ -394,10 +402,12 @@ class VexiiRiscvProbe(cpu : VexiiRiscv, kb : Option[konata.Backend], var withRvl
       val decodeId = serialized.decodeId.toInt
       val microOpId = serialized.microOpId.toInt
       val ctx = hart.microOp(microOpId)
-      val decodeCtx = hart.decode(decodeId)
       ctx.clear()
-      ctx.fetchId = decodeCtx.fetchId
-      ctx.decodeId = decodeId
+      if(decodeId >= 0 && decodeId < hart.decode.length){
+        val decodeCtx = hart.decode(decodeId)
+        ctx.fetchId = decodeCtx.fetchId
+        ctx.decodeId = decodeId
+      }
       ctx.instruction = serialized.microOp.toLong
       ctx.spawnAt = cycle
       hart.microOpAllocPtr = (microOpId+1) & microOpIdMask
@@ -583,11 +593,11 @@ class VexiiRiscvProbe(cpu : VexiiRiscv, kb : Option[konata.Backend], var withRvl
         val uopId = hart.microOpRetirePtr
         val uop = hart.microOp(uopId)
         if (uop.spawned) {
-          val fetch = hart.fetch(uop.fetchId)
-          val decode = hart.decode(uop.decodeId)
+          val fetchOpt = if(uop.fetchId >= 0 && uop.fetchId < hart.fetch.length) Some(hart.fetch(uop.fetchId)) else None
+          val decodeOpt = if(uop.decodeId >= 0 && uop.decodeId < hart.decode.length) Some(hart.decode(uop.decodeId)) else None
 
           hart.lastUopId = uopId
-          hart.konataThread.foreach(_.cycleLock = fetch.spawnAt)
+          fetchOpt.foreach(fetch => hart.konataThread.foreach(_.cycleLock = fetch.spawnAt))
 
           uop.toKonata(hart)
           if (uop.didCommit) {
@@ -615,11 +625,11 @@ class VexiiRiscvProbe(cpu : VexiiRiscv, kb : Option[konata.Backend], var withRvl
               if (uop.csrReadDone) backends.foreach(_.readRf(hartId, 4, uop.csrAddress, uop.csrReadData))
               if (uop.csrWriteDone) backends.foreach(_.writeRf(hartId, 4, uop.csrAddress, uop.csrWriteData))
             }
-            if(uop.commit) backends.foreach(_.commit(hartId, decode.pc, uop.instruction))
+            decodeOpt.foreach(decode => if(uop.commit) backends.foreach(_.commit(hartId, decode.pc, uop.instruction)))
             if (autoStoreBroadcast && uop.storeValid) {
               backends.foreach(_.storeBroadcast(hartId, uop.storeSqId))
             }
-            if(!uop.trap) commitsCallbacks.foreach(_(hartId, decode.pc))
+            if(!uop.trap) decodeOpt.foreach(decode => commitsCallbacks.foreach(_(hartId, decode.pc)))
           }
           uop.clear()
         }

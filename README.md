@@ -1,5 +1,44 @@
 # VexiiRiscv + MiCo
 
+## Project Status
+
+This repository currently includes an LLM inference benchmark flow built around:
+
+- Model: `sw/llama2/llama_3M_W1A8_bench.bin`
+- Main software config: `OPT=bnrv SPRAM=1 BITNET_QUANT=2 USE_SIMD=32`
+- Main benchmark: `sw/llama2_benchmark.c`
+
+### Best restored baseline
+
+The current clean restored baseline is:
+
+- `INT8 KV`
+- `Q -> int8`
+- `Q·K` with `int32` accumulation
+- delayed dequantization
+- RVF-enabled quantization path (`fcvt.w.s`)
+
+Representative result:
+
+- `Prefill Time: 1964742`
+- `QMatMul Time: 597154`
+- `Quant Time: 111935`
+- `Attention Time: 1155780`
+- `Softmax Time: 117997`
+
+Log reference:
+
+- `bench_ctx_runs/restore_rvf.989157.log`
+
+### Key findings
+
+- A plain `INT8 KV` path reduced KV memory footprint but was initially slower than the FP32 KV baseline.
+- Converting the `Q·K` kernel to `int32 dot + delayed dequant` recovered performance and slightly outperformed the FP32 KV baseline.
+- The main remaining attention bottleneck is `A·V` accumulation, not `Q·K`.
+- Several later experiments were explored, including on-chip KV, packed writes, group-wise K, int4 V, and VPU bring-up. Most did not exceed the restored `INT8 KV + int32 dot` baseline.
+- A major regression source during debugging was that `quant.c` had accidentally been rebuilt without RVF support; restoring `MARCH=rv32imfc` brought `Quant Time` back from roughly `330k` cycles to roughly `112k`.
+
+
 VexiiRiscv-MiCo is a mixed-precision computing extension plugin for VexiiRiscv.
 
 You can find the MiCo plugin in scala class `vexiiriscv.execute.MiCoPlugin`.

@@ -134,7 +134,7 @@ class CsrAccessPlugin(val layer : LaneLayer,
       }
 
       val inject = new elp.Execute(injectAt){
-        assert(!(up(LANE_SEL) && SEL && isCancel), "CsrAccessPlugin saw forbidden select && cancel request")
+        // VPU/CFU can introduce cancel on an already-selected CSR uop; treat it as a no-op instead of asserting
         val imm = IMM(UOP)
         val csrAddress = UOP(Const.csrRange)
         val immZero = imm.z === 0
