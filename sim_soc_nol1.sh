@@ -1,0 +1,22 @@
+sbt "runMain vexiiriscv.soc.mico.MiCoSocSim \
+    --load-elf $1 \
+    --with-rvc \
+    --with-rvf \
+    --with-rvm \
+    --decoders 2 \
+    --lanes 2 \
+    --with-aligner-buffer \
+    --with-dispatcher-buffer \
+    --with-ras \
+    --with-btb \
+    --with-gshare \
+    --with-late-alu \
+    --regfile-async \
+    --fetch-l1 \
+    --fetch-l1-ways 2 \
+    --allow-bypass-from 0 \
+    --div-radix 4 \
+    --sparse-mem \
+    --bitnet \
+    --bitnet-qtype 1b \
+    --bitnet-version 32 "
