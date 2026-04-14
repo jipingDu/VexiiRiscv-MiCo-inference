@@ -21,4 +21,5 @@ sbt "runMain vexiiriscv.soc.mico.MiCoSocSim \
     --sparse-mem \
     --bitnet \
     --bitnet-qtype 1b \
-    --bitnet-version 32 "
+    --bitnet-version 32 \
+    --quant-hw "
