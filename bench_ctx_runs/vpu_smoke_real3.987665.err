@@ -1,0 +1,5 @@
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+/bin/sh: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+bash: warning: setlocale: LC_ALL: cannot change locale (C.UTF-8)
+Cancelled: runMain vexiiriscv.soc.mico.MiCoSocSim --load-elf /hpc/home/connect.jdu428/VexiiRiscv-MiCo-new/sw/llama2_benchmark.elf --with-rvc --with-rvf --with-rvm --decoders 2 --lanes 2 --with-aligner-buffer --with-dispatcher-buffer --with-ras --with-btb --with-gshare --with-late-alu --regfile-async --lsu-l1 --lsu-l1-ways 2 --fetch-l1 --fetch-l1-ways 2 --allow-bypass-from 0 --div-radix 4 --sparse-mem --bitnet --bitnet-qtype 1b --bitnet-version 32 --mico --mico-width 32 --mico-vpu

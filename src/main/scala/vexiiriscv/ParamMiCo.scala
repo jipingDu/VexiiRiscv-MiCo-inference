@@ -1,11 +1,12 @@
 package vexiiriscv
 
-import vexiiriscv.execute.{BitNetBufferPlugin, BitNetPlugin, MiCoMultiCyclePlugin}
+import vexiiriscv.execute.{BitNetBufferPlugin, BitNetPlugin, MiCoMultiCyclePlugin, QuantPlugin}
 
 import java.lang.reflect.Modifier
 
 class ParamMiCo extends ParamSimple {
   var withMiCo = false
+  var withQuantHw = false
   var micoWidth = 32
   var micoStaged = false
   var withBitNet = false
@@ -16,6 +17,7 @@ class ParamMiCo extends ParamSimple {
     super.addOptions(parser)
     import parser._
     opt[Unit]("mico") action { (v, c) => withMiCo = true }
+    opt[Unit]("quant-hw") action { (v, c) => withQuantHw = true }
     opt[Int]("mico-width") action { (v, c) => micoWidth = v }
     opt[Unit]("mico-staged") action { (v, c) => micoStaged = true }
     opt[String]("bitnet-qtype") action { (v, c) => bitNetQType = v }
@@ -25,6 +27,9 @@ class ParamMiCo extends ParamSimple {
 
   override def plugins(hartId: Int = 0) = {
     val pa = super.pluginsArea(hartId)
+    if(withQuantHw) {
+      pa.plugins += new QuantPlugin(pa.early0)
+    }
     if(withMiCo) {
       pa.plugins += new MiCoMultiCyclePlugin(pa.early0, staged = micoStaged, simdWidth = micoWidth)
       // if(withMiCo) plugins += new MiCoPluginV2(early0)
