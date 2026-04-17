@@ -22,4 +22,6 @@ sbt "runMain vexiiriscv.soc.mico.MiCoSocSim \
     --bitnet \
     --bitnet-qtype 1b \
     --bitnet-version 32 \
+    --mico \
+    --mico-width 32 \
     --quant-hw "
